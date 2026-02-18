@@ -1,4 +1,6 @@
 import sql from "mssql";
+console.log("DB_SERVER from env:", process.env.DB_SERVER);
+
 
 const config: sql.config = {
   server: process.env.DB_SERVER!,
