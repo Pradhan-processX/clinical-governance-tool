@@ -2,17 +2,48 @@ import * as XLSX from "xlsx";
 import type { ExcelRow, ColumnMapping, ParsedExcel } from "@/types";
 
 const COLUMN_PATTERNS: Record<keyof ColumnMapping, string[]> = {
-  room: ["room", "room no", "room number", "bed", "bed no"],
-  residentName: ["resident", "name", "resident name", "client", "client name"],
-  date: ["date"],
-  time: ["time"],
-  eventType: ["event type", "event", "type", "note type", "category"],
-  notes: ["notes", "progress notes", "note", "content", "description", "text"],
+  room: ["room no", "room number", "current number", "current no", "bed no", "room", "bed", "unit"],
+  residentName: ["resident name", "client name", "consumer name", "resident", "client", "consumer", "patient"],
+  date: ["note date", "entry date", "incident date", "date"],
+  time: ["note time", "entry time", "incident time", "time"],
+  eventType: ["event type", "note type", "event", "care area"],
+  createdByName: ["created by name", "created by", "written by", "staff name", "clinician", "author", "user name"],
+  notes: ["progress notes", "progress note", "notes", "note", "content", "description", "text"],
 };
 
 function fuzzyMatch(header: string, patterns: string[]): boolean {
   const normalized = header.toLowerCase().trim();
   return patterns.some((pattern) => normalized.includes(pattern));
+}
+
+function formatCellDate(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return null;
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, "0");
+    const d = String(value.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  return String(value).trim() || null;
+}
+
+function formatCellTime(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return null;
+    const h = String(value.getHours()).padStart(2, "0");
+    const m = String(value.getMinutes()).padStart(2, "0");
+    return `${h}:${m}`;
+  }
+  // Handle numeric fraction-of-day (e.g. 0.5 = 12:00)
+  if (typeof value === "number") {
+    const totalMinutes = Math.round(value * 24 * 60);
+    const h = String(Math.floor(totalMinutes / 60) % 24).padStart(2, "0");
+    const m = String(totalMinutes % 60).padStart(2, "0");
+    return `${h}:${m}`;
+  }
+  return String(value).trim() || null;
 }
 
 function detectColumnMapping(headers: string[]): { mapping: ColumnMapping; warnings: string[] } {
@@ -22,6 +53,7 @@ function detectColumnMapping(headers: string[]): { mapping: ColumnMapping; warni
     date: null,
     time: null,
     eventType: null,
+    createdByName: null,
     notes: null,
   };
   const warnings: string[] = [];
@@ -50,7 +82,7 @@ export function parseExcelBuffer(buffer: Buffer): ParsedExcel {
   if (raw.length < 2) {
     return {
       rows: [],
-      mapping: { room: null, residentName: null, date: null, time: null, eventType: null, notes: null },
+      mapping: { room: null, residentName: null, date: null, time: null, eventType: null, createdByName: null, notes: null },
       headers: [],
       warnings: ["Excel file appears to be empty or has no data rows."],
     };
@@ -70,11 +102,12 @@ export function parseExcelBuffer(buffer: Buffer): ParsedExcel {
     rows.push({
       room: mapping.room !== null ? String(row[mapping.room] ?? "").trim() || null : null,
       residentName: mapping.residentName !== null ? String(row[mapping.residentName] ?? "").trim() || null : null,
-      date: mapping.date !== null ? String(row[mapping.date] ?? "").trim() || null : null,
-      time: mapping.time !== null ? String(row[mapping.time] ?? "").trim() || null : null,
+      date: mapping.date !== null ? formatCellDate(row[mapping.date]) : null,
+      time: mapping.time !== null ? formatCellTime(row[mapping.time]) : null,
       eventType: mapping.eventType !== null ? String(row[mapping.eventType] ?? "").trim() || null : null,
+      createdByName: mapping.createdByName !== null ? String(row[mapping.createdByName] ?? "").trim() || null : null,
       notes: notesValue.trim(),
-      rawRowIndex: i + 1, // 1-based row number (accounting for header)
+      rawRowIndex: i + 1,
     });
   }
 

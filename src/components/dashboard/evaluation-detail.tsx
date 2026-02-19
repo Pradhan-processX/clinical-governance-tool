@@ -30,15 +30,21 @@ function statusLabel(status: string | null) {
   }
 }
 
+function formatScenarioCode(code: string | null) {
+  if (!code || code === "NOT_APPLICABLE") return "—";
+  return code
+    .replace(/^FALL_/, "")
+    .split("_")
+    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export function EvaluationDetail({ evaluationId, onClose }: EvaluationDetailProps) {
   const [data, setData] = useState<EvaluationWithItems | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!evaluationId) {
-      setData(null);
-      return;
-    }
+    if (!evaluationId) { setData(null); return; }
     setLoading(true);
     fetch(`/api/evaluations/${evaluationId}`)
       .then((r) => r.json())
@@ -67,24 +73,28 @@ export function EvaluationDetail({ evaluationId, onClose }: EvaluationDetailProp
         )}
 
         {data && !loading && (
-          <div className="space-y-4">
-            {/* Meta */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+          <div className="space-y-5">
+            {/* Resident meta */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
               <div>
-                <p className="text-slate-500 text-xs">Resident</p>
+                <p className="text-slate-500 text-xs">Resident Name</p>
                 <p className="font-medium">{data.residentName ?? "—"}</p>
               </div>
               <div>
-                <p className="text-slate-500 text-xs">Room</p>
+                <p className="text-slate-500 text-xs">Room No.</p>
                 <p className="font-medium">{data.roomNumber ?? "—"}</p>
               </div>
               <div>
-                <p className="text-slate-500 text-xs">Date</p>
+                <p className="text-slate-500 text-xs">Note Date</p>
                 <p className="font-medium">{data.noteDate ?? "—"}</p>
               </div>
               <div>
-                <p className="text-slate-500 text-xs">Scenario</p>
-                <p className="font-medium">{data.classifiedScenarioCode ?? "—"}</p>
+                <p className="text-slate-500 text-xs">Written By</p>
+                <p className="font-medium">{data.createdByName ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-slate-500 text-xs">Fall Type</p>
+                <p className="font-medium">{formatScenarioCode(data.classifiedScenarioCode)}</p>
               </div>
             </div>
 
@@ -92,7 +102,7 @@ export function EvaluationDetail({ evaluationId, onClose }: EvaluationDetailProp
             <div className="grid grid-cols-3 gap-3 text-sm bg-slate-50 rounded-md p-3">
               <div className="text-center">
                 <p className="text-2xl font-bold text-slate-800">{data.totalItems ?? 0}</p>
-                <p className="text-xs text-slate-500">Total items</p>
+                <p className="text-xs text-slate-500">Total Items</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-green-600">{data.documentedItems ?? 0}</p>
@@ -100,7 +110,7 @@ export function EvaluationDetail({ evaluationId, onClose }: EvaluationDetailProp
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-red-600">{data.missingMandatoryCount ?? 0}</p>
-                <p className="text-xs text-slate-500">Missing mandatory</p>
+                <p className="text-xs text-slate-500">Missing Mandatory</p>
               </div>
             </div>
 
@@ -115,47 +125,61 @@ export function EvaluationDetail({ evaluationId, onClose }: EvaluationDetailProp
             {/* Checklist items */}
             {data.itemResults && data.itemResults.length > 0 && (
               <div>
-                <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Checklist</p>
-                <div className="space-y-1">
-                  {data.itemResults.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`rounded-md border p-2.5 text-sm ${
-                        item.isDocumented
-                          ? "border-green-200 bg-green-50"
-                          : item.mandatory
-                          ? "border-red-200 bg-red-50"
-                          : "border-amber-200 bg-amber-50"
-                      }`}
-                    >
-                      <div className="flex items-start gap-2">
-                        {item.isDocumented ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                        ) : item.mandatory ? (
-                          <XCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-xs text-slate-500">{item.itemCode}</span>
-                            {item.mandatory && (
-                              <span className="text-xs text-red-500">*mandatory</span>
+                <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Checklist Items</p>
+                <div className="rounded-md border overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>
+                        <th className="w-8 px-3 py-2"></th>
+                        <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Item</th>
+                        <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs w-28">Status</th>
+                        <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Evidence / Gap</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {data.itemResults.map((item) => (
+                        <tr
+                          key={item.id}
+                          className={
+                            item.isDocumented ? "bg-green-50" : item.mandatory ? "bg-red-50" : "bg-amber-50"
+                          }
+                        >
+                          <td className="px-3 py-2.5">
+                            {item.isDocumented ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : item.mandatory ? (
+                              <XCircle className="h-4 w-4 text-red-600" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-amber-600" />
                             )}
-                          </div>
-                          <p className="text-slate-800">{item.itemText}</p>
-                          {item.evidence && (
-                            <p className="text-xs text-green-700 mt-0.5 italic">
-                              Evidence: {item.evidence}
-                            </p>
-                          )}
-                          {item.gap && (
-                            <p className="text-xs text-red-600 mt-0.5">Gap: {item.gap}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="text-slate-800">{item.itemText}</span>
+                            {item.mandatory && (
+                              <span className="ml-1.5 text-xs text-red-500">*mandatory</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            {item.isDocumented ? (
+                              <span className="text-xs font-medium text-green-700">Documented</span>
+                            ) : item.mandatory ? (
+                              <span className="text-xs font-medium text-red-700">Missing</span>
+                            ) : (
+                              <span className="text-xs font-medium text-amber-700">Not documented</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-xs">
+                            {item.evidence && (
+                              <p className="text-green-700 italic">&ldquo;{item.evidence}&rdquo;</p>
+                            )}
+                            {item.gap && (
+                              <p className="text-red-600 mt-0.5">{item.gap}</p>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

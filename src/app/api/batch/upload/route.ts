@@ -49,12 +49,13 @@ export async function POST(req: NextRequest) {
       evalRequest.input("noteDate", sql.NVarChar, row.date);
       evalRequest.input("noteTime", sql.NVarChar, row.time);
       evalRequest.input("eventType", sql.NVarChar, row.eventType);
+      evalRequest.input("createdByName", sql.NVarChar, row.createdByName);
       evalRequest.input("progressNoteText", sql.NVarChar(sql.MAX), row.notes);
       evalRequest.input("sourceRowIndex", sql.Int, row.rawRowIndex);
 
       await evalRequest.query(`
-        INSERT INTO Evaluations (Id, BatchId, BatchDate, RoomNumber, ResidentName, NoteDate, NoteTime, EventType, ProgressNoteText, SourceRowIndex)
-        VALUES (@id, @batchId, @batchDate, @roomNumber, @residentName, @noteDate, @noteTime, @eventType, @progressNoteText, @sourceRowIndex)
+        INSERT INTO Evaluations (Id, BatchId, BatchDate, RoomNumber, ResidentName, NoteDate, NoteTime, EventType, CreatedByName, ProgressNoteText, SourceRowIndex)
+        VALUES (@id, @batchId, @batchDate, @roomNumber, @residentName, @noteDate, @noteTime, @eventType, @createdByName, @progressNoteText, @sourceRowIndex)
       `);
     }
 

@@ -11,7 +11,9 @@ export async function POST(req: NextRequest) {
 
     const result = await evaluateNote({
       noteText: data.noteText,
+      residentName: data.residentName,
       eventType: data.eventType,
+      createdByName: data.createdByName,
       forcedScenarioCode: data.forcedScenarioCode,
     });
 
@@ -24,6 +26,7 @@ export async function POST(req: NextRequest) {
     request.input("id", sql.NVarChar, evalId);
     request.input("batchDate", sql.Date, today);
     request.input("progressNoteText", sql.NVarChar(sql.MAX), data.noteText);
+    request.input("residentName", sql.NVarChar, data.residentName ?? null);
     request.input("eventType", sql.NVarChar, data.eventType ?? null);
     request.input("classifiedScenarioCode", sql.NVarChar, result.scenarioCode);
     request.input("confidence", sql.Float, result.confidence);
@@ -36,14 +39,17 @@ export async function POST(req: NextRequest) {
     request.input("modelUsed", sql.NVarChar, result.modelUsed);
     request.input("promptTokens", sql.Int, result.promptTokens);
     request.input("completionTokens", sql.Int, result.completionTokens);
+    request.input("latencyMs", sql.Int, result.latencyMs);
+    request.input("createdByName", sql.NVarChar, data.createdByName ?? null);
+    request.input("promptSent", sql.NVarChar(sql.MAX), result.promptSent);
 
     await request.query(`
-      INSERT INTO Evaluations (Id, BatchDate, ProgressNoteText, EventType,
+      INSERT INTO Evaluations (Id, BatchDate, ProgressNoteText, ResidentName, EventType, CreatedByName,
         ClassifiedScenarioCode, Confidence, EvaluationStatus, TotalItems, DocumentedItems,
-        MissingMandatoryCount, GapsSummary, AiResponseRaw, ModelUsed, PromptTokens, CompletionTokens)
-      VALUES (@id, @batchDate, @progressNoteText, @eventType,
+        MissingMandatoryCount, GapsSummary, AiResponseRaw, ModelUsed, PromptTokens, CompletionTokens, LatencyMs, PromptSent)
+      VALUES (@id, @batchDate, @progressNoteText, @residentName, @eventType, @createdByName,
         @classifiedScenarioCode, @confidence, @evaluationStatus, @totalItems, @documentedItems,
-        @missingMandatoryCount, @gapsSummary, @aiResponseRaw, @modelUsed, @promptTokens, @completionTokens)
+        @missingMandatoryCount, @gapsSummary, @aiResponseRaw, @modelUsed, @promptTokens, @completionTokens, @latencyMs, @promptSent)
     `);
 
     // Insert item results

@@ -16,10 +16,11 @@ async function getExcelRows(batchId: string): Promise<ExcelRow[]> {
     NoteDate: string | null;
     NoteTime: string | null;
     EventType: string | null;
+    CreatedByName: string | null;
     ProgressNoteText: string;
     SourceRowIndex: number | null;
   }>(`
-    SELECT Id, RoomNumber, ResidentName, NoteDate, NoteTime, EventType, ProgressNoteText, SourceRowIndex
+    SELECT Id, RoomNumber, ResidentName, NoteDate, NoteTime, EventType, CreatedByName, ProgressNoteText, SourceRowIndex
     FROM Evaluations
     WHERE BatchId = @batchId AND EvaluationStatus IS NULL
     ORDER BY SourceRowIndex ASC
@@ -31,6 +32,7 @@ async function getExcelRows(batchId: string): Promise<ExcelRow[]> {
     date: r.NoteDate,
     time: r.NoteTime,
     eventType: r.EventType,
+    createdByName: r.CreatedByName,
     notes: r.ProgressNoteText,
     rawRowIndex: r.SourceRowIndex ?? 0,
   }));
@@ -59,11 +61,12 @@ export async function processBatch(batchId: string): Promise<void> {
       NoteDate: string | null;
       NoteTime: string | null;
       EventType: string | null;
+      CreatedByName: string | null;
       ProgressNoteText: string;
       SourceRowIndex: number | null;
       BatchDate: string;
     }>(`
-      SELECT Id, RoomNumber, ResidentName, NoteDate, NoteTime, EventType, ProgressNoteText, SourceRowIndex, BatchDate
+      SELECT Id, RoomNumber, ResidentName, NoteDate, NoteTime, EventType, CreatedByName, ProgressNoteText, SourceRowIndex, BatchDate
       FROM Evaluations
       WHERE BatchId = @batchId AND EvaluationStatus IS NULL
       ORDER BY SourceRowIndex ASC
@@ -78,7 +81,9 @@ export async function processBatch(batchId: string): Promise<void> {
     try {
       const result = await evaluateNote({
         noteText: row.ProgressNoteText,
+        residentName: row.ResidentName ?? undefined,
         eventType: row.EventType ?? undefined,
+        createdByName: row.CreatedByName ?? undefined,
       });
 
       if (result.scenarioCode === "NOT_APPLICABLE") {
@@ -98,6 +103,8 @@ export async function processBatch(batchId: string): Promise<void> {
       updateRequest.input("modelUsed", sql.NVarChar, result.modelUsed);
       updateRequest.input("promptTokens", sql.Int, result.promptTokens);
       updateRequest.input("completionTokens", sql.Int, result.completionTokens);
+      updateRequest.input("latencyMs", sql.Int, result.latencyMs);
+      updateRequest.input("promptSent", sql.NVarChar(sql.MAX), result.promptSent);
       updateRequest.input("evaluatedAt", sql.DateTime2, new Date());
 
       await updateRequest.query(`
@@ -113,6 +120,8 @@ export async function processBatch(batchId: string): Promise<void> {
           ModelUsed = @modelUsed,
           PromptTokens = @promptTokens,
           CompletionTokens = @completionTokens,
+          LatencyMs = @latencyMs,
+          PromptSent = @promptSent,
           EvaluatedAt = @evaluatedAt
         WHERE Id = @id
       `);

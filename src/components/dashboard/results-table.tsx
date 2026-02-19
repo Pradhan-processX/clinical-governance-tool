@@ -31,6 +31,15 @@ function statusLabel(status: string | null) {
   }
 }
 
+function formatScenarioCode(code: string | null) {
+  if (!code || code === "NOT_APPLICABLE") return "—";
+  return code
+    .replace(/^FALL_/, "")
+    .split("_")
+    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export function ResultsTable({ evaluations }: ResultsTableProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -57,19 +66,20 @@ export function ResultsTable({ evaluations }: ResultsTableProps) {
 
   return (
     <>
+      {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-3">
         <Input
-          placeholder="Search resident or room..."
+          placeholder="Search resident name or room..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs h-9 text-sm"
         />
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 h-9 text-sm">
+          <SelectTrigger className="w-44 h-9 text-sm">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="compliant">Compliant</SelectItem>
             <SelectItem value="partial">Partial</SelectItem>
             <SelectItem value="non-compliant">Non-Compliant</SelectItem>
@@ -78,68 +88,75 @@ export function ResultsTable({ evaluations }: ResultsTableProps) {
         </Select>
         <Select value={scenarioFilter} onValueChange={setScenarioFilter}>
           <SelectTrigger className="w-52 h-9 text-sm">
-            <SelectValue placeholder="All scenarios" />
+            <SelectValue placeholder="All fall types" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All scenarios</SelectItem>
+            <SelectItem value="all">All Fall Types</SelectItem>
             {scenarios.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
+              <SelectItem key={s} value={s}>{formatScenarioCode(s)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
         <span className="text-sm text-slate-500 self-center ml-auto">
-          {filtered.length} of {evaluations.length} notes
+          {filtered.length} of {evaluations.length} records
         </span>
       </div>
 
+      {/* Table */}
       <div className="rounded-md border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b">
             <tr>
-              <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Room</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Resident</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Date</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Time</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Event Type</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Scenario</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Status</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Missing</th>
-              <th className="text-left px-3 py-2 font-medium text-slate-600 text-xs">Actions</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Room No.</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Resident Name</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Note Date</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Time</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Event Type</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Written By</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Fall Type</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Compliance</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Missing Items</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Details</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-8 text-slate-400 text-sm">
+                <td colSpan={10} className="text-center py-10 text-slate-400 text-sm">
                   No evaluations found
                 </td>
               </tr>
             ) : (
               filtered.map((ev) => (
                 <tr key={ev.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-3 py-2">{ev.roomNumber ?? "—"}</td>
-                  <td className="px-3 py-2 font-medium">{ev.residentName ?? "—"}</td>
-                  <td className="px-3 py-2">{ev.noteDate ?? "—"}</td>
-                  <td className="px-3 py-2">{ev.noteTime ?? "—"}</td>
-                  <td className="px-3 py-2 text-slate-500">{ev.eventType ?? "—"}</td>
-                  <td className="px-3 py-2 text-xs text-slate-600">{ev.classifiedScenarioCode ?? "—"}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2.5 text-slate-600">{ev.roomNumber ?? "—"}</td>
+                  <td className="px-3 py-2.5 font-medium text-slate-800">{ev.residentName ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-slate-600">{ev.noteDate ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-slate-600">{ev.noteTime ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-slate-500 text-xs">{ev.eventType ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-slate-500 text-xs">{ev.createdByName ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-slate-700 text-xs">{formatScenarioCode(ev.classifiedScenarioCode)}</td>
+                  <td className="px-3 py-2.5">
                     <Badge variant={statusVariant(ev.evaluationStatus) as Parameters<typeof Badge>[0]["variant"]}>
                       {statusLabel(ev.evaluationStatus)}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2.5 text-center">
                     {ev.missingMandatoryCount !== null && ev.missingMandatoryCount > 0 ? (
-                      <span className="text-red-600 font-medium">{ev.missingMandatoryCount}</span>
+                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+                        {ev.missingMandatoryCount}
+                      </span>
                     ) : (
-                      <span className="text-slate-400">0</span>
+                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-green-100 text-green-700 text-xs font-bold">
+                        0
+                      </span>
                     )}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2.5">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-xs"
+                      className="h-7 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                       onClick={() => setSelectedId(ev.id)}
                     >
                       View

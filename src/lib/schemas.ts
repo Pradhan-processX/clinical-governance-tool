@@ -63,6 +63,8 @@ export const updateChecklistItemSchema = z.object({
 
 export const singleEvaluateSchema = z.object({
   noteText: z.string().min(10),
+  residentName: z.string().optional(),
   eventType: z.string().optional(),
+  createdByName: z.string().optional(),
   forcedScenarioCode: z.string().optional(),
 });

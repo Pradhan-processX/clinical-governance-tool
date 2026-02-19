@@ -20,12 +20,33 @@ const config: sql.config = {
 };
 
 let pool: sql.ConnectionPool | null = null;
+let migrationRan = false;
+
+async function runMigrations(p: sql.ConnectionPool): Promise<void> {
+  if (migrationRan) return;
+  migrationRan = true;
+  try {
+    await p.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'LatencyMs')
+        ALTER TABLE Evaluations ADD LatencyMs INT;
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'CreatedByName')
+        ALTER TABLE Evaluations ADD CreatedByName NVARCHAR(100);
+      IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'NoteDate' AND max_length < 100)
+        ALTER TABLE Evaluations ALTER COLUMN NoteDate NVARCHAR(50);
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'PromptSent')
+        ALTER TABLE Evaluations ADD PromptSent NVARCHAR(MAX);
+    `);
+  } catch {
+    // Table may not exist yet (first-time setup) — ignore
+  }
+}
 
 export async function getPool(): Promise<sql.ConnectionPool> {
   if (pool && pool.connected) {
     return pool;
   }
   pool = await new sql.ConnectionPool(config).connect();
+  await runMigrations(pool);
   return pool;
 }
 

@@ -9,6 +9,9 @@ const navLinks = [
   { href: "/", label: "Dashboard" },
   { href: "/batch", label: "Batch Upload" },
   { href: "/evaluate", label: "Evaluate" },
+  { href: "/history", label: "History" },
+  { href: "/ai-trace", label: "AI Trace" },
+  { href: "/api/docs", label: "API Docs" },
   { href: "/admin/scenarios", label: "Scenarios" },
 ];
 

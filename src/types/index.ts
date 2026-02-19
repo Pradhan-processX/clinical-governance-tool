@@ -53,6 +53,7 @@ export interface Evaluation {
   noteDate: string | null;
   noteTime: string | null;
   eventType: string | null;
+  createdByName: string | null;
   progressNoteText: string;
   sourceRowIndex: number | null;
   classifiedScenarioCode: string | null;
@@ -66,6 +67,7 @@ export interface Evaluation {
   modelUsed: string | null;
   promptTokens: number | null;
   completionTokens: number | null;
+  latencyMs: number | null;
   evaluatedAt: string;
 }
 
@@ -81,6 +83,7 @@ export interface ItemResult {
 }
 
 export interface EvaluationWithItems extends Evaluation {
+  promptSent: string | null;
   itemResults: ItemResult[];
 }
 
@@ -113,6 +116,7 @@ export interface ExcelRow {
   date: string | null;
   time: string | null;
   eventType: string | null;
+  createdByName: string | null;
   notes: string;
   rawRowIndex: number;
 }
@@ -123,6 +127,7 @@ export interface ColumnMapping {
   date: number | null;
   time: number | null;
   eventType: number | null;
+  createdByName: number | null;
   notes: number | null;
 }
 

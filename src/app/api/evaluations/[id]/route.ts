@@ -28,6 +28,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         ModelUsed: string | null;
         PromptTokens: number | null;
         CompletionTokens: number | null;
+        LatencyMs: number | null;
+        CreatedByName: string | null;
+        PromptSent: string | null;
         EvaluatedAt: string;
       }>(`
         SELECT * FROM Evaluations WHERE Id = @id
@@ -78,6 +81,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       modelUsed: ev.ModelUsed,
       promptTokens: ev.PromptTokens,
       completionTokens: ev.CompletionTokens,
+      latencyMs: ev.LatencyMs,
+      createdByName: ev.CreatedByName,
+      promptSent: ev.PromptSent,
       evaluatedAt: ev.EvaluatedAt,
       itemResults: itemsResult.recordset.map((i) => ({
         id: i.Id,

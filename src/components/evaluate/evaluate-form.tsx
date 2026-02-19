@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
@@ -32,6 +33,7 @@ function statusLabel(status: string) {
 
 export function EvaluateForm({ scenarios }: EvaluateFormProps) {
   const [noteText, setNoteText] = useState("");
+  const [residentName, setResidentName] = useState("");
   const [scenarioCode, setScenarioCode] = useState("AUTO");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +51,7 @@ export function EvaluateForm({ scenarios }: EvaluateFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           noteText,
+          residentName: residentName.trim() || undefined,
           forcedScenarioCode: scenarioCode === "AUTO" ? undefined : scenarioCode,
         }),
       });
@@ -64,6 +67,18 @@ export function EvaluateForm({ scenarios }: EvaluateFormProps) {
 
   return (
     <div className="space-y-4">
+      <div>
+        <label className="text-sm font-medium text-slate-700 mb-1 block">
+          Resident Name (optional)
+        </label>
+        <Input
+          placeholder="e.g. Smith, John"
+          value={residentName}
+          onChange={(e) => setResidentName(e.target.value)}
+          className="h-9 text-sm"
+        />
+      </div>
+
       <div>
         <label className="text-sm font-medium text-slate-700 mb-1 block">
           Progress Note

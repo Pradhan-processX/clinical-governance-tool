@@ -19,6 +19,7 @@ export interface ChatResult {
   promptTokens: number;
   completionTokens: number;
   model: string;
+  latencyMs: number;
 }
 
 export async function callAzureOpenAI(
@@ -27,6 +28,7 @@ export async function callAzureOpenAI(
 ): Promise<ChatResult> {
   const openai = getClient();
 
+  const t0 = Date.now();
   const response = await openai.chat.completions.create({
     model: process.env.AZURE_OPENAI_DEPLOYMENT!,
     messages: [
@@ -36,6 +38,7 @@ export async function callAzureOpenAI(
     temperature: 0.1,
     response_format: { type: "json_object" },
   });
+  const latencyMs = Date.now() - t0;
 
   const choice = response.choices[0];
   if (!choice?.message?.content) {
@@ -47,5 +50,6 @@ export async function callAzureOpenAI(
     promptTokens: response.usage?.prompt_tokens ?? 0,
     completionTokens: response.usage?.completion_tokens ?? 0,
     model: response.model,
+    latencyMs,
   };
 }

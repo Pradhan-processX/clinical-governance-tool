@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPool, sql } from "@/lib/db";
+import { getPool } from "@/lib/db";
 import { seedDatabase } from "@/lib/seed";
 
 export async function POST() {
@@ -67,7 +67,7 @@ export async function POST() {
         BatchDate DATE NOT NULL,
         RoomNumber NVARCHAR(20),
         ResidentName NVARCHAR(100),
-        NoteDate NVARCHAR(20),
+        NoteDate NVARCHAR(50),
         NoteTime NVARCHAR(10),
         EventType NVARCHAR(50),
         ProgressNoteText NVARCHAR(MAX) NOT NULL,
@@ -83,6 +83,9 @@ export async function POST() {
         ModelUsed NVARCHAR(50),
         PromptTokens INT,
         CompletionTokens INT,
+        LatencyMs INT,
+        CreatedByName NVARCHAR(100),
+        PromptSent NVARCHAR(MAX),
         EvaluatedAt DATETIME2 DEFAULT GETDATE()
       )
     `);
@@ -100,6 +103,14 @@ export async function POST() {
         Evidence NVARCHAR(MAX) DEFAULT '',
         Gap NVARCHAR(MAX) DEFAULT ''
       )
+    `);
+
+    // Migrate existing tables — safe to re-run
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'LatencyMs')
+        ALTER TABLE Evaluations ADD LatencyMs INT;
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'CreatedByName')
+        ALTER TABLE Evaluations ADD CreatedByName NVARCHAR(100);
     `);
 
     // Create indexes
@@ -122,6 +133,22 @@ export async function POST() {
     await pool.request().query(`
       IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ChecklistItems_ScenarioId')
         CREATE INDEX IX_ChecklistItems_ScenarioId ON ChecklistItems(ScenarioId);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Evaluations_EvaluatedAt')
+        CREATE INDEX IX_Evaluations_EvaluatedAt ON Evaluations(EvaluatedAt DESC);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Evaluations_ResidentName')
+        CREATE INDEX IX_Evaluations_ResidentName ON Evaluations(ResidentName);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Evaluations_RoomNumber')
+        CREATE INDEX IX_Evaluations_RoomNumber ON Evaluations(RoomNumber);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Evaluations_Status_BatchDate')
+        CREATE INDEX IX_Evaluations_Status_BatchDate ON Evaluations(EvaluationStatus, BatchDate DESC);
     `);
 
     // Seed data
