@@ -19,40 +19,40 @@ export async function GET(req: NextRequest) {
     const request = pool.request();
     const countRequest = pool.request();
 
-    const conditions: string[] = ["EvaluationStatus IS NOT NULL"];
+    const conditions: string[] = ["e.EvaluationStatus IS NOT NULL"];
 
     if (batchId) {
-      conditions.push("BatchId = @batchId");
+      conditions.push("e.BatchId = @batchId");
       request.input("batchId", sql.NVarChar, batchId);
       countRequest.input("batchId", sql.NVarChar, batchId);
     }
     if (batchDate) {
-      conditions.push("CAST(BatchDate AS DATE) = @batchDate");
+      conditions.push("CAST(e.BatchDate AS DATE) = @batchDate");
       request.input("batchDate", sql.NVarChar, batchDate);
       countRequest.input("batchDate", sql.NVarChar, batchDate);
     }
     if (status && status !== "all") {
-      conditions.push("EvaluationStatus = @status");
+      conditions.push("e.EvaluationStatus = @status");
       request.input("status", sql.NVarChar, status);
       countRequest.input("status", sql.NVarChar, status);
     }
     if (scenario && scenario !== "all") {
-      conditions.push("ClassifiedScenarioCode = @scenario");
+      conditions.push("e.ClassifiedScenarioCode = @scenario");
       request.input("scenario", sql.NVarChar, scenario);
       countRequest.input("scenario", sql.NVarChar, scenario);
     }
     if (search) {
-      conditions.push("(ResidentName LIKE @search OR RoomNumber LIKE @search OR CreatedByName LIKE @search)");
+      conditions.push("(e.ResidentName LIKE @search OR e.RoomNumber LIKE @search OR e.CreatedByName LIKE @search)");
       request.input("search", sql.NVarChar, `%${search}%`);
       countRequest.input("search", sql.NVarChar, `%${search}%`);
     }
     if (dateFrom) {
-      conditions.push("NoteDate >= @dateFrom");
+      conditions.push("e.NoteDate >= @dateFrom");
       request.input("dateFrom", sql.NVarChar, dateFrom);
       countRequest.input("dateFrom", sql.NVarChar, dateFrom);
     }
     if (dateTo) {
-      conditions.push("NoteDate <= @dateTo");
+      conditions.push("e.NoteDate <= @dateTo");
       request.input("dateTo", sql.NVarChar, dateTo);
       countRequest.input("dateTo", sql.NVarChar, dateTo);
     }
@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
         NoteTime: string | null;
         EventType: string | null;
         CreatedByName: string | null;
+        ClinicalRiskCategory: string | null;
         ClassifiedScenarioCode: string | null;
         Confidence: number | null;
         EvaluationStatus: string | null;
@@ -86,19 +87,20 @@ export async function GET(req: NextRequest) {
         LatencyMs: number | null;
         EvaluatedAt: string;
       }>(`
-        SELECT Id, BatchId, BatchDate, RoomNumber, ResidentName, NoteDate, NoteTime, EventType,
-               CreatedByName, ClassifiedScenarioCode, Confidence, EvaluationStatus, TotalItems, DocumentedItems,
-               MissingMandatoryCount, GapsSummary, ModelUsed, PromptTokens, CompletionTokens, LatencyMs, EvaluatedAt
-        FROM Evaluations
+        SELECT e.Id, e.BatchId, e.BatchDate, e.RoomNumber, e.ResidentName, e.NoteDate, e.NoteTime, e.EventType,
+               e.CreatedByName, s.Category AS ClinicalRiskCategory, e.ClassifiedScenarioCode, e.Confidence, e.EvaluationStatus, e.TotalItems, e.DocumentedItems,
+               e.MissingMandatoryCount, e.GapsSummary, e.ModelUsed, e.PromptTokens, e.CompletionTokens, e.LatencyMs, e.EvaluatedAt
+        FROM Evaluations e
+        LEFT JOIN Scenarios s ON s.Code = e.ClassifiedScenarioCode
         ${whereClause}
-        ORDER BY EvaluatedAt DESC
+        ORDER BY e.EvaluatedAt DESC
         OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
       `),
       countRequest.query<{ Total: number; TotalCostTokens: number }>(`
         SELECT
           COUNT(*) AS Total,
-          SUM(ISNULL(PromptTokens, 0) + ISNULL(CompletionTokens, 0)) AS TotalCostTokens
-        FROM Evaluations
+          SUM(ISNULL(e.PromptTokens, 0) + ISNULL(e.CompletionTokens, 0)) AS TotalCostTokens
+        FROM Evaluations e
         ${whereClause}
       `),
     ]);
@@ -113,6 +115,7 @@ export async function GET(req: NextRequest) {
       noteTime: r.NoteTime,
       eventType: r.EventType,
       createdByName: r.CreatedByName,
+      clinicalRiskCategory: r.ClinicalRiskCategory,
       classifiedScenarioCode: r.ClassifiedScenarioCode,
       confidence: r.Confidence,
       evaluationStatus: r.EvaluationStatus,

@@ -105,6 +105,7 @@ export async function processBatch(batchId: string): Promise<void> {
       updateRequest.input("completionTokens", sql.Int, result.completionTokens);
       updateRequest.input("latencyMs", sql.Int, result.latencyMs);
       updateRequest.input("promptSent", sql.NVarChar(sql.MAX), result.promptSent);
+      updateRequest.input("systemPromptSent", sql.NVarChar(sql.MAX), result.systemPromptSent);
       updateRequest.input("evaluatedAt", sql.DateTime2, new Date());
 
       await updateRequest.query(`
@@ -122,6 +123,7 @@ export async function processBatch(batchId: string): Promise<void> {
           CompletionTokens = @completionTokens,
           LatencyMs = @latencyMs,
           PromptSent = @promptSent,
+          SystemPromptSent = @systemPromptSent,
           EvaluatedAt = @evaluatedAt
         WHERE Id = @id
       `);

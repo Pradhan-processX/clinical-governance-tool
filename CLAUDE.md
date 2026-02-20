@@ -125,3 +125,22 @@ Five tables, all created by `/api/setup`:
 - `DB_TRUST_SERVER_CERTIFICATE=true` is intentional for internal SQL Express instances
 - The AI model deployment name is `gpt-4.1` (not `gpt-4o`) — confirm in `.env.local`
 - Excel exports colour-code rows: green = compliant, yellow = partial, red = non-compliant
+
+## Missing / Next Work
+
+### 1. Prompt management architecture (not implemented yet)
+
+- Create a separate DB table for prompt templates and versions (for dynamic prompt selection at runtime).
+- Add API routes/UI to manage prompt versions (create, activate/deactivate, rollback).
+- Add evaluator logic to load active prompt version from DB instead of hardcoded-only prompt text.
+
+### 2. Prompt versioning in repository (not implemented yet)
+
+- Add a dedicated prompts folder (for example `src/prompts/`) to store versioned prompt files.
+- Define a file naming/version convention (for example `v1.md`, `v2.md`) and metadata mapping to DB versions.
+- Add a sync/import flow between files and DB prompt table.
+
+### 3. AI Trace completeness
+
+- Surface full system prompt in AI Trace detail consistently for all new evaluations.
+- Keep backward compatibility: historical rows without stored system prompt should display as `N/A`.

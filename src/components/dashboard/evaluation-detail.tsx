@@ -30,13 +30,11 @@ function statusLabel(status: string | null) {
   }
 }
 
-function formatScenarioCode(code: string | null) {
-  if (!code || code === "NOT_APPLICABLE") return "—";
-  return code
-    .replace(/^FALL_/, "")
-    .split("_")
-    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
-    .join(" ");
+function formatClinicalRiskCategory(category: string | null, scenarioCode: string | null) {
+  if (category && category.trim().length > 0) return category;
+  if (!scenarioCode || scenarioCode === "NOT_APPLICABLE") return "—";
+  const inferred = scenarioCode.split("_")[0];
+  return inferred.charAt(0) + inferred.slice(1).toLowerCase();
 }
 
 export function EvaluationDetail({ evaluationId, onClose }: EvaluationDetailProps) {
@@ -44,7 +42,10 @@ export function EvaluationDetail({ evaluationId, onClose }: EvaluationDetailProp
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!evaluationId) { setData(null); return; }
+    if (!evaluationId) {
+      setData(null);
+      return;
+    }
     setLoading(true);
     fetch(`/api/evaluations/${evaluationId}`)
       .then((r) => r.json())
@@ -93,8 +94,8 @@ export function EvaluationDetail({ evaluationId, onClose }: EvaluationDetailProp
                 <p className="font-medium">{data.createdByName ?? "—"}</p>
               </div>
               <div>
-                <p className="text-slate-500 text-xs">Fall Type</p>
-                <p className="font-medium">{formatScenarioCode(data.classifiedScenarioCode)}</p>
+                <p className="text-slate-500 text-xs">Clinical Risk Category</p>
+                <p className="font-medium">{formatClinicalRiskCategory(data.clinicalRiskCategory, data.classifiedScenarioCode)}</p>
               </div>
             </div>
 
@@ -140,9 +141,7 @@ export function EvaluationDetail({ evaluationId, onClose }: EvaluationDetailProp
                       {data.itemResults.map((item) => (
                         <tr
                           key={item.id}
-                          className={
-                            item.isDocumented ? "bg-green-50" : item.mandatory ? "bg-red-50" : "bg-amber-50"
-                          }
+                          className={item.isDocumented ? "bg-green-50" : item.mandatory ? "bg-red-50" : "bg-amber-50"}
                         >
                           <td className="px-3 py-2.5">
                             {item.isDocumented ? (
@@ -170,7 +169,7 @@ export function EvaluationDetail({ evaluationId, onClose }: EvaluationDetailProp
                           </td>
                           <td className="px-3 py-2.5 text-xs">
                             {item.evidence && (
-                              <p className="text-green-700 italic">&ldquo;{item.evidence}&rdquo;</p>
+                              <p className="text-green-700 italic">"{item.evidence}"</p>
                             )}
                             {item.gap && (
                               <p className="text-red-600 mt-0.5">{item.gap}</p>

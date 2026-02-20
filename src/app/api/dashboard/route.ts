@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
         NoteDate: string | null;
         NoteTime: string | null;
         EventType: string | null;
+        ClinicalRiskCategory: string | null;
         ClassifiedScenarioCode: string | null;
         Confidence: number | null;
         EvaluationStatus: string | null;
@@ -74,12 +75,13 @@ export async function GET(req: NextRequest) {
         CreatedByName: string | null;
         EvaluatedAt: string;
       }>(`
-        SELECT TOP 500 Id, BatchId, BatchDate, RoomNumber, ResidentName, NoteDate, NoteTime, EventType,
-               ClassifiedScenarioCode, Confidence, EvaluationStatus, TotalItems, DocumentedItems,
-               MissingMandatoryCount, GapsSummary, ModelUsed, LatencyMs, CreatedByName, EvaluatedAt
-        FROM Evaluations
-        WHERE BatchId = @batchId AND EvaluationStatus IS NOT NULL
-        ORDER BY EvaluatedAt DESC
+        SELECT TOP 500 e.Id, e.BatchId, e.BatchDate, e.RoomNumber, e.ResidentName, e.NoteDate, e.NoteTime, e.EventType,
+               s.Category AS ClinicalRiskCategory, e.ClassifiedScenarioCode, e.Confidence, e.EvaluationStatus, e.TotalItems, e.DocumentedItems,
+               e.MissingMandatoryCount, e.GapsSummary, e.ModelUsed, e.LatencyMs, e.CreatedByName, e.EvaluatedAt
+        FROM Evaluations e
+        LEFT JOIN Scenarios s ON s.Code = e.ClassifiedScenarioCode
+        WHERE e.BatchId = @batchId AND e.EvaluationStatus IS NOT NULL
+        ORDER BY e.EvaluatedAt DESC
       `),
       sumRequest.query<{ Status: string; Count: number }>(`
         SELECT EvaluationStatus AS Status, COUNT(*) AS Count
@@ -98,6 +100,7 @@ export async function GET(req: NextRequest) {
       noteDate: r.NoteDate,
       noteTime: r.NoteTime,
       eventType: r.EventType,
+      clinicalRiskCategory: r.ClinicalRiskCategory,
       classifiedScenarioCode: r.ClassifiedScenarioCode,
       confidence: r.Confidence,
       evaluationStatus: r.EvaluationStatus,

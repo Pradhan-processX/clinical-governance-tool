@@ -376,6 +376,7 @@ export async function GET(req: NextRequest) {
             noteTime: { type: "string", nullable: true },
             eventType: { type: "string", nullable: true },
             createdByName: { type: "string", nullable: true },
+            clinicalRiskCategory: { type: "string", nullable: true },
             classifiedScenarioCode: { type: "string", nullable: true },
             confidence: { type: "number", nullable: true },
             evaluationStatus: { type: "string", nullable: true },
@@ -399,6 +400,7 @@ export async function GET(req: NextRequest) {
                 progressNoteText: { type: "string" },
                 aiResponseRaw: { type: "string", nullable: true, description: "Raw AI JSON response string." },
                 promptSent: { type: "string", nullable: true },
+                systemPromptSent: { type: "string", nullable: true, description: "Full system prompt passed to AI." },
                 itemResults: {
                   type: "array",
                   items: { $ref: "#/components/schemas/ItemResult" },
@@ -545,6 +547,7 @@ export async function GET(req: NextRequest) {
             completionTokens: { type: "integer" },
             latencyMs: { type: "integer" },
             promptSent: { type: "string" },
+            systemPromptSent: { type: "string" },
             items: {
               type: "array",
               items: {

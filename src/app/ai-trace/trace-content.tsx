@@ -146,7 +146,7 @@ export function AiTraceContent() {
     setPage(1);
   }
 
-  async function copyToClipboard(value: string, field: "request" | "response" | "parsed") {
+  async function copyToClipboard(value: string, field: "system" | "request" | "response" | "parsed") {
     try {
       await navigator.clipboard.writeText(value);
       setCopiedField(field);
@@ -318,7 +318,26 @@ export function AiTraceContent() {
 
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-700">Request Task</h3>
+                  <h3 className="text-sm font-semibold text-slate-700">System Prompt (Passed To AI)</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => copyToClipboard(trace.systemPromptSent ?? "", "system")}
+                    disabled={!trace.systemPromptSent}
+                  >
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    {copiedField === "system" ? "Copied" : "Copy"}
+                  </Button>
+                </div>
+                <pre className="rounded-md border bg-slate-50 p-3 text-xs text-slate-700 whitespace-pre-wrap break-words max-h-80 overflow-auto">
+                  {trace.systemPromptSent ?? "N/A"}
+                </pre>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-700">User Message (Request Task)</h3>
                   <Button
                     variant="ghost"
                     size="sm"

@@ -16,6 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         NoteDate: string | null;
         NoteTime: string | null;
         EventType: string | null;
+        ClinicalRiskCategory: string | null;
         ProgressNoteText: string;
         ClassifiedScenarioCode: string | null;
         Confidence: number | null;
@@ -31,9 +32,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         LatencyMs: number | null;
         CreatedByName: string | null;
         PromptSent: string | null;
+        SystemPromptSent: string | null;
         EvaluatedAt: string;
       }>(`
-        SELECT * FROM Evaluations WHERE Id = @id
+        SELECT e.*, s.Category AS ClinicalRiskCategory
+        FROM Evaluations e
+        LEFT JOIN Scenarios s ON s.Code = e.ClassifiedScenarioCode
+        WHERE e.Id = @id
       `);
 
     if (evalResult.recordset.length === 0) {
@@ -69,6 +74,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       noteDate: ev.NoteDate,
       noteTime: ev.NoteTime,
       eventType: ev.EventType,
+      clinicalRiskCategory: ev.ClinicalRiskCategory,
       progressNoteText: ev.ProgressNoteText,
       classifiedScenarioCode: ev.ClassifiedScenarioCode,
       confidence: ev.Confidence,
@@ -84,6 +90,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       latencyMs: ev.LatencyMs,
       createdByName: ev.CreatedByName,
       promptSent: ev.PromptSent,
+      systemPromptSent: ev.SystemPromptSent,
       evaluatedAt: ev.EvaluatedAt,
       itemResults: itemsResult.recordset.map((i) => ({
         id: i.Id,

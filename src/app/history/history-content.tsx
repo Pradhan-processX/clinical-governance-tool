@@ -28,9 +28,11 @@ function statusLabel(status: string | null) {
   }
 }
 
-function formatScenarioCode(code: string | null) {
-  if (!code || code === "NOT_APPLICABLE") return "—";
-  return code.replace(/^FALL_/, "").split("_").map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(" ");
+function formatClinicalRiskCategory(category: string | null, scenarioCode: string | null) {
+  if (category && category.trim().length > 0) return category;
+  if (!scenarioCode || scenarioCode === "NOT_APPLICABLE") return "—";
+  const inferred = scenarioCode.split("_")[0];
+  return inferred.charAt(0) + inferred.slice(1).toLowerCase();
 }
 
 interface HistoryResponse {
@@ -50,20 +52,18 @@ export function HistoryContent() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [status, setStatus] = useState("all");
-  const [scenario, setScenario] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const fetchData = useCallback((params: {
-    page: number; search: string; status: string; scenario: string;
+    page: number; search: string; status: string;
     dateFrom: string; dateTo: string;
   }) => {
     setLoading(true);
     const q = new URLSearchParams({ page: String(params.page), pageSize: String(PAGE_SIZE) });
     if (params.search) q.set("search", params.search);
     if (params.status !== "all") q.set("status", params.status);
-    if (params.scenario !== "all") q.set("scenario", params.scenario);
     if (params.dateFrom) q.set("dateFrom", params.dateFrom);
     if (params.dateTo) q.set("dateTo", params.dateTo);
 
@@ -75,8 +75,8 @@ export function HistoryContent() {
   }, []);
 
   useEffect(() => {
-    fetchData({ page, search, status, scenario, dateFrom, dateTo });
-  }, [page, search, status, scenario, dateFrom, dateTo, fetchData]);
+    fetchData({ page, search, status, dateFrom, dateTo });
+  }, [page, search, status, dateFrom, dateTo, fetchData]);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -87,7 +87,6 @@ export function HistoryContent() {
   function handleFilterChange(key: string, value: string) {
     setPage(1);
     if (key === "status") setStatus(value);
-    if (key === "scenario") setScenario(value);
     if (key === "dateFrom") setDateFrom(value);
     if (key === "dateTo") setDateTo(value);
   }
@@ -96,7 +95,6 @@ export function HistoryContent() {
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const nonCompliantCount = evaluations.filter((e) => e.evaluationStatus === "non-compliant").length;
-  const uniqueScenarios = Array.from(new Set(evaluations.map((e) => e.classifiedScenarioCode).filter(Boolean))) as string[];
 
   return (
     <div className="space-y-5">
@@ -149,27 +147,16 @@ export function HistoryContent() {
             <SelectItem value="not-applicable">N/A</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={scenario} onValueChange={(v) => handleFilterChange("scenario", v)}>
-          <SelectTrigger className="w-52 h-9 text-sm">
-            <SelectValue placeholder="All fall types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Fall Types</SelectItem>
-            {uniqueScenarios.map((s) => (
-              <SelectItem key={s} value={s}>{formatScenarioCode(s)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <div className="flex items-center gap-1">
           <span className="text-xs text-slate-500">From</span>
           <Input type="date" value={dateFrom} onChange={(e) => handleFilterChange("dateFrom", e.target.value)} className="h-9 text-sm w-36" />
           <span className="text-xs text-slate-500">To</span>
           <Input type="date" value={dateTo} onChange={(e) => handleFilterChange("dateTo", e.target.value)} className="h-9 text-sm w-36" />
         </div>
-        {(search || status !== "all" || scenario !== "all" || dateFrom || dateTo) && (
+        {(search || status !== "all" || dateFrom || dateTo) && (
           <Button
             variant="ghost" size="sm" className="h-9 text-xs text-slate-500"
-            onClick={() => { setSearch(""); setSearchInput(""); setStatus("all"); setScenario("all"); setDateFrom(""); setDateTo(""); setPage(1); }}
+            onClick={() => { setSearch(""); setSearchInput(""); setStatus("all"); setDateFrom(""); setDateTo(""); setPage(1); }}
           >
             Clear filters
           </Button>
@@ -186,7 +173,7 @@ export function HistoryContent() {
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Note Date</th>
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Written By</th>
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Event Type</th>
-              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Fall Type</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Clinical Risk Category</th>
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Compliance</th>
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Missing Items</th>
               <th className="px-3 py-2.5"></th>
@@ -204,7 +191,9 @@ export function HistoryContent() {
                 <td className="px-3 py-2.5 text-slate-600 text-xs">{ev.noteDate ?? "—"}</td>
                 <td className="px-3 py-2.5 text-slate-500 text-xs">{ev.createdByName ?? "—"}</td>
                 <td className="px-3 py-2.5 text-slate-500 text-xs">{ev.eventType ?? "—"}</td>
-                <td className="px-3 py-2.5 text-slate-700 text-xs">{formatScenarioCode(ev.classifiedScenarioCode)}</td>
+                <td className="px-3 py-2.5 text-slate-700 text-xs">
+                  {formatClinicalRiskCategory(ev.clinicalRiskCategory, ev.classifiedScenarioCode)}
+                </td>
                 <td className="px-3 py-2.5">
                   <Badge variant={statusVariant(ev.evaluationStatus) as Parameters<typeof Badge>[0]["variant"]}>
                     {statusLabel(ev.evaluationStatus)}

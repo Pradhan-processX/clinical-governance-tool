@@ -86,6 +86,7 @@ export async function POST() {
         LatencyMs INT,
         CreatedByName NVARCHAR(100),
         PromptSent NVARCHAR(MAX),
+        SystemPromptSent NVARCHAR(MAX),
         EvaluatedAt DATETIME2 DEFAULT GETDATE()
       )
     `);
@@ -111,6 +112,10 @@ export async function POST() {
         ALTER TABLE Evaluations ADD LatencyMs INT;
       IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'CreatedByName')
         ALTER TABLE Evaluations ADD CreatedByName NVARCHAR(100);
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'PromptSent')
+        ALTER TABLE Evaluations ADD PromptSent NVARCHAR(MAX);
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'SystemPromptSent')
+        ALTER TABLE Evaluations ADD SystemPromptSent NVARCHAR(MAX);
     `);
 
     // Create indexes

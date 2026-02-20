@@ -31,35 +31,26 @@ function statusLabel(status: string | null) {
   }
 }
 
-function formatScenarioCode(code: string | null) {
-  if (!code || code === "NOT_APPLICABLE") return "—";
-  return code
-    .replace(/^FALL_/, "")
-    .split("_")
-    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
-    .join(" ");
+function formatClinicalRiskCategory(category: string | null, scenarioCode: string | null) {
+  if (category && category.trim().length > 0) return category;
+  if (!scenarioCode || scenarioCode === "NOT_APPLICABLE") return "—";
+  const inferred = scenarioCode.split("_")[0];
+  return inferred.charAt(0) + inferred.slice(1).toLowerCase();
 }
 
 export function ResultsTable({ evaluations }: ResultsTableProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [scenarioFilter, setScenarioFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const scenarios = Array.from(
-    new Set(evaluations.map((e) => e.classifiedScenarioCode).filter(Boolean))
-  ) as string[];
 
   const filtered = evaluations.filter((e) => {
     if (statusFilter !== "all" && e.evaluationStatus !== statusFilter) return false;
-    if (scenarioFilter !== "all" && e.classifiedScenarioCode !== scenarioFilter) return false;
     if (search) {
       const q = search.toLowerCase();
       if (
         !e.residentName?.toLowerCase().includes(q) &&
         !e.roomNumber?.toLowerCase().includes(q)
-      )
-        return false;
+      ) return false;
     }
     return true;
   });
@@ -86,17 +77,6 @@ export function ResultsTable({ evaluations }: ResultsTableProps) {
             <SelectItem value="not-applicable">N/A</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={scenarioFilter} onValueChange={setScenarioFilter}>
-          <SelectTrigger className="w-52 h-9 text-sm">
-            <SelectValue placeholder="All fall types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Fall Types</SelectItem>
-            {scenarios.map((s) => (
-              <SelectItem key={s} value={s}>{formatScenarioCode(s)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <span className="text-sm text-slate-500 self-center ml-auto">
           {filtered.length} of {evaluations.length} records
         </span>
@@ -113,7 +93,7 @@ export function ResultsTable({ evaluations }: ResultsTableProps) {
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Time</th>
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Event Type</th>
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Written By</th>
-              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Fall Type</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Clinical Risk Category</th>
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Compliance</th>
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Missing Items</th>
               <th className="text-left px-3 py-2.5 font-semibold text-slate-600 text-xs uppercase tracking-wide">Details</th>
@@ -135,7 +115,9 @@ export function ResultsTable({ evaluations }: ResultsTableProps) {
                   <td className="px-3 py-2.5 text-slate-600">{ev.noteTime ?? "—"}</td>
                   <td className="px-3 py-2.5 text-slate-500 text-xs">{ev.eventType ?? "—"}</td>
                   <td className="px-3 py-2.5 text-slate-500 text-xs">{ev.createdByName ?? "—"}</td>
-                  <td className="px-3 py-2.5 text-slate-700 text-xs">{formatScenarioCode(ev.classifiedScenarioCode)}</td>
+                  <td className="px-3 py-2.5 text-slate-700 text-xs">
+                    {formatClinicalRiskCategory(ev.clinicalRiskCategory, ev.classifiedScenarioCode)}
+                  </td>
                   <td className="px-3 py-2.5">
                     <Badge variant={statusVariant(ev.evaluationStatus) as Parameters<typeof Badge>[0]["variant"]}>
                       {statusLabel(ev.evaluationStatus)}

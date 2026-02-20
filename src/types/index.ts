@@ -54,6 +54,7 @@ export interface Evaluation {
   noteTime: string | null;
   eventType: string | null;
   createdByName: string | null;
+  clinicalRiskCategory: string | null;
   progressNoteText: string;
   sourceRowIndex: number | null;
   classifiedScenarioCode: string | null;
@@ -84,6 +85,7 @@ export interface ItemResult {
 
 export interface EvaluationWithItems extends Evaluation {
   promptSent: string | null;
+  systemPromptSent: string | null;
   itemResults: ItemResult[];
 }
 

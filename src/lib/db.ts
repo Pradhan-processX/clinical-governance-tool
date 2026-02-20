@@ -35,6 +35,8 @@ async function runMigrations(p: sql.ConnectionPool): Promise<void> {
         ALTER TABLE Evaluations ALTER COLUMN NoteDate NVARCHAR(50);
       IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'PromptSent')
         ALTER TABLE Evaluations ADD PromptSent NVARCHAR(MAX);
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'SystemPromptSent')
+        ALTER TABLE Evaluations ADD SystemPromptSent NVARCHAR(MAX);
     `);
   } catch {
     // Table may not exist yet (first-time setup) — ignore

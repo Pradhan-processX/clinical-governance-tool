@@ -42,14 +42,15 @@ export async function POST(req: NextRequest) {
     request.input("latencyMs", sql.Int, result.latencyMs);
     request.input("createdByName", sql.NVarChar, data.createdByName ?? null);
     request.input("promptSent", sql.NVarChar(sql.MAX), result.promptSent);
+    request.input("systemPromptSent", sql.NVarChar(sql.MAX), result.systemPromptSent);
 
     await request.query(`
       INSERT INTO Evaluations (Id, BatchDate, ProgressNoteText, ResidentName, EventType, CreatedByName,
         ClassifiedScenarioCode, Confidence, EvaluationStatus, TotalItems, DocumentedItems,
-        MissingMandatoryCount, GapsSummary, AiResponseRaw, ModelUsed, PromptTokens, CompletionTokens, LatencyMs, PromptSent)
+        MissingMandatoryCount, GapsSummary, AiResponseRaw, ModelUsed, PromptTokens, CompletionTokens, LatencyMs, PromptSent, SystemPromptSent)
       VALUES (@id, @batchDate, @progressNoteText, @residentName, @eventType, @createdByName,
         @classifiedScenarioCode, @confidence, @evaluationStatus, @totalItems, @documentedItems,
-        @missingMandatoryCount, @gapsSummary, @aiResponseRaw, @modelUsed, @promptTokens, @completionTokens, @latencyMs, @promptSent)
+        @missingMandatoryCount, @gapsSummary, @aiResponseRaw, @modelUsed, @promptTokens, @completionTokens, @latencyMs, @promptSent, @systemPromptSent)
     `);
 
     // Insert item results
