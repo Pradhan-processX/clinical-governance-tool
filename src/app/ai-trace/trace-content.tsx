@@ -32,6 +32,8 @@ interface TraceListResponse {
 }
 
 const PAGE_SIZE = 25;
+const GPT_41_INPUT_COST_PER_TOKEN_USD = 2 / 1_000_000;
+const GPT_41_OUTPUT_COST_PER_TOKEN_USD = 8 / 1_000_000;
 
 function statusVariant(status: string | null) {
   switch (status) {
@@ -61,6 +63,16 @@ function formatDateTime(value: string | null | undefined): string {
 
 function formatText(value: string | null | undefined): string {
   return value && value.trim().length > 0 ? value : "N/A";
+}
+
+function calculateTraceCostUSD(promptTokens: number | null | undefined, completionTokens: number | null | undefined): number {
+  const prompt = promptTokens ?? 0;
+  const completion = completionTokens ?? 0;
+  return (prompt * GPT_41_INPUT_COST_PER_TOKEN_USD) + (completion * GPT_41_OUTPUT_COST_PER_TOKEN_USD);
+}
+
+function formatUsd(amount: number): string {
+  return `$${amount.toFixed(6)}`;
 }
 
 export function AiTraceContent() {
@@ -297,7 +309,7 @@ export function AiTraceContent() {
 
           {!traceLoading && !traceError && trace && (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 <div className="rounded-md border bg-slate-50 p-3">
                   <p className="text-xs text-slate-500">Model</p>
                   <p className="text-sm font-medium text-slate-800">{formatText(trace.modelUsed)}</p>
@@ -314,7 +326,22 @@ export function AiTraceContent() {
                   <p className="text-xs text-slate-500">Latency</p>
                   <p className="text-sm font-medium text-slate-800">{trace.latencyMs ?? 0} ms</p>
                 </div>
+                <div className="rounded-md border bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Total Tokens</p>
+                  <p className="text-sm font-medium text-slate-800">{(trace.promptTokens ?? 0) + (trace.completionTokens ?? 0)}</p>
+                </div>
+                <div className="rounded-md border bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Cost (USD)</p>
+                  <p className="text-sm font-medium text-slate-800">
+                    {formatUsd(calculateTraceCostUSD(trace.promptTokens, trace.completionTokens))}
+                  </p>
+                </div>
               </div>
+
+              <p className="text-xs text-slate-500">
+                Cost formula: ({trace.promptTokens ?? 0} x $0.000002) + ({trace.completionTokens ?? 0} x $0.000008)
+                {" "}={formatUsd(calculateTraceCostUSD(trace.promptTokens, trace.completionTokens))}
+              </p>
 
               <div className="space-y-1">
                 <div className="flex items-center justify-between">

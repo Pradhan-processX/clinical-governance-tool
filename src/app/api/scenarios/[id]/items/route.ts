@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool, sql } from "@/lib/db";
 import { createChecklistItemSchema } from "@/lib/schemas";
+import { invalidateScenariosCache } from "@/lib/evaluator";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       VALUES (@id, @scenarioId, @itemCode, @itemText, @mandatory, @sortOrder, @keywords)
     `);
 
+    invalidateScenariosCache();
     return NextResponse.json({ success: true, id: data.id });
   } catch (error) {
     return NextResponse.json(

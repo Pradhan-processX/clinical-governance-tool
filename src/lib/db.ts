@@ -27,6 +27,8 @@ async function runMigrations(p: sql.ConnectionPool): Promise<void> {
   migrationRan = true;
   try {
     await p.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('BatchJobs') AND name = 'OriginalFile')
+        ALTER TABLE BatchJobs ADD OriginalFile VARBINARY(MAX) NULL;
       IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'LatencyMs')
         ALTER TABLE Evaluations ADD LatencyMs INT;
       IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'CreatedByName')

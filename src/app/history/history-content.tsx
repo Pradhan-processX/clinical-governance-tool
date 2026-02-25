@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EvaluationDetail } from "@/components/dashboard/evaluation-detail";
-import { ChevronLeft, ChevronRight, FileText, TrendingDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileText, TrendingDown } from "lucide-react";
 import type { Evaluation } from "@/types";
 
 function statusVariant(status: string | null) {
@@ -95,12 +95,26 @@ export function HistoryContent() {
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const nonCompliantCount = evaluations.filter((e) => e.evaluationStatus === "non-compliant").length;
+  const exportQuery = new URLSearchParams();
+  if (search) exportQuery.set("search", search);
+  if (status !== "all") exportQuery.set("status", status);
+  if (dateFrom) exportQuery.set("dateFrom", dateFrom);
+  if (dateTo) exportQuery.set("dateTo", dateTo);
+  const exportUrl = `/api/evaluations/export${exportQuery.toString() ? `?${exportQuery.toString()}` : ""}`;
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-800">Evaluation History</h1>
-        <span className="text-sm text-slate-500">{total.toLocaleString()} records</span>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="h-9">
+            <a href={exportUrl}>
+              <Download className="h-4 w-4 mr-1.5" />
+              Download Excel
+            </a>
+          </Button>
+          <span className="text-sm text-slate-500">{total.toLocaleString()} records</span>
+        </div>
       </div>
 
       {/* Summary cards */}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool, sql } from "@/lib/db";
 import { createScenarioSchema } from "@/lib/schemas";
+import { invalidateScenariosCache } from "@/lib/evaluator";
 
 export async function GET() {
   try {
@@ -38,7 +39,7 @@ export async function GET() {
       ORDER BY SortOrder ASC
     `);
 
-    const itemsByScenario: Record<string, typeof itemsResult.recordset> = {};
+    const itemsByScenario: Record<string, (typeof itemsResult.recordset)[number][]> = {};
     for (const item of itemsResult.recordset) {
       if (!itemsByScenario[item.ScenarioId]) {
         itemsByScenario[item.ScenarioId] = [];
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
       VALUES (@id, @code, @name, @category, @description, @classificationHints, @isActive, @sortOrder)
     `);
 
+    invalidateScenariosCache();
     return NextResponse.json({ success: true, id: data.id });
   } catch (error) {
     return NextResponse.json(

@@ -90,6 +90,35 @@ export async function GET(req: NextRequest) {
           },
         },
       },
+      "/api/evaluations/export": {
+        get: {
+          tags: ["Evaluations"],
+          summary: "Download evaluation history as Excel",
+          parameters: [
+            { in: "query", name: "batchId", schema: { type: "string" } },
+            { in: "query", name: "batchDate", schema: { type: "string", format: "date" } },
+            { in: "query", name: "status", schema: { type: "string" } },
+            { in: "query", name: "scenario", schema: { type: "string" } },
+            { in: "query", name: "search", schema: { type: "string" } },
+            { in: "query", name: "dateFrom", schema: { type: "string", format: "date" } },
+            { in: "query", name: "dateTo", schema: { type: "string", format: "date" } },
+          ],
+          responses: {
+            "200": {
+              description: "Excel file",
+              content: {
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                  schema: { type: "string", format: "binary" },
+                },
+              },
+            },
+            "500": {
+              description: "Server error",
+              content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+            },
+          },
+        },
+      },
       "/api/evaluations/summary": {
         get: {
           tags: ["Evaluations"],

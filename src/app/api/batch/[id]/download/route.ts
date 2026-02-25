@@ -2,24 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPool, sql } from "@/lib/db";
 import { buildEnrichedExcel } from "@/lib/excel-writer";
 
-// Store original file buffers in memory (simple approach for MVP)
-const fileBufferCache = new Map<string, Buffer>();
-
-export function cacheFileBuffer(batchId: string, buffer: Buffer) {
-  fileBufferCache.set(batchId, buffer);
-}
-
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const pool = await getPool();
 
-    // Get batch info
+    // Get batch info and persisted original file bytes
     const batchResult = await pool.request()
       .input("id", sql.NVarChar, params.id)
-      .query<{ FileName: string }>(`SELECT FileName FROM BatchJobs WHERE Id = @id`);
+      .query<{ FileName: string; OriginalFile: Buffer | null }>(`
+        SELECT FileName, OriginalFile
+        FROM BatchJobs
+        WHERE Id = @id
+      `);
 
     if (batchResult.recordset.length === 0) {
       return NextResponse.json({ error: "Batch not found" }, { status: 404 });
+    }
+
+    const originalFileBytes = batchResult.recordset[0].OriginalFile;
+    if (!originalFileBytes) {
+      return NextResponse.json(
+        { error: "Original file not stored for this batch. Re-upload and reprocess this batch to enable download." },
+        { status: 404 }
+      );
     }
 
     // Get all evaluations for this batch
@@ -53,20 +58,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       gapsSummary: r.GapsSummary,
     }));
 
-    // Check if we have cached original file
-    const originalBuffer = fileBufferCache.get(params.id);
-    if (!originalBuffer) {
-      return NextResponse.json(
-        { error: "Original file not available for download. Please re-upload the file." },
-        { status: 404 }
-      );
-    }
-
+    const originalBuffer = Buffer.from(originalFileBytes);
     const enrichedBuffer = buildEnrichedExcel(originalBuffer, evaluations as Parameters<typeof buildEnrichedExcel>[1]);
 
     const fileName = batchResult.recordset[0].FileName.replace(/\.xlsx?$/i, "") + "_results.xlsx";
 
-    return new NextResponse(enrichedBuffer, {
+    return new NextResponse(new Uint8Array(enrichedBuffer), {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="${fileName}"`,

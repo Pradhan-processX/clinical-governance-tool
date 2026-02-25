@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool, sql } from "@/lib/db";
 import { updateScenarioSchema } from "@/lib/schemas";
+import { invalidateScenariosCache } from "@/lib/evaluator";
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -39,6 +40,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     await request.query(`UPDATE Scenarios SET ${setParts.join(", ")} WHERE Id = @id`);
 
+    invalidateScenariosCache();
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
@@ -55,6 +57,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
       .input("id", sql.NVarChar, params.id)
       .query("DELETE FROM Scenarios WHERE Id = @id");
 
+    invalidateScenariosCache();
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(

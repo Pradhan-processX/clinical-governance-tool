@@ -45,6 +45,7 @@ export async function POST() {
       CREATE TABLE BatchJobs (
         Id NVARCHAR(50) PRIMARY KEY,
         FileName NVARCHAR(255) NOT NULL,
+        OriginalFile VARBINARY(MAX),
         BatchDate DATE NOT NULL,
         TotalNotes INT NOT NULL,
         ProcessedNotes INT DEFAULT 0,
@@ -108,6 +109,8 @@ export async function POST() {
 
     // Migrate existing tables — safe to re-run
     await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('BatchJobs') AND name = 'OriginalFile')
+        ALTER TABLE BatchJobs ADD OriginalFile VARBINARY(MAX) NULL;
       IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'LatencyMs')
         ALTER TABLE Evaluations ADD LatencyMs INT;
       IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'CreatedByName')

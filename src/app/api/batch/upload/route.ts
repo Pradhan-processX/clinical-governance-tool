@@ -30,12 +30,13 @@ export async function POST(req: NextRequest) {
     const batchRequest = pool.request();
     batchRequest.input("id", sql.NVarChar, batchId);
     batchRequest.input("fileName", sql.NVarChar, file.name);
+    batchRequest.input("originalFile", sql.VarBinary(sql.MAX), buffer);
     batchRequest.input("batchDate", sql.Date, today);
     batchRequest.input("totalNotes", sql.Int, rows.length);
 
     await batchRequest.query(`
-      INSERT INTO BatchJobs (Id, FileName, BatchDate, TotalNotes, Status)
-      VALUES (@id, @fileName, @batchDate, @totalNotes, 'pending')
+      INSERT INTO BatchJobs (Id, FileName, OriginalFile, BatchDate, TotalNotes, Status)
+      VALUES (@id, @fileName, @originalFile, @batchDate, @totalNotes, 'pending')
     `);
 
     // Insert evaluation stubs (EvaluationStatus = NULL = pending)

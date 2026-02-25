@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool, sql } from "@/lib/db";
 import { updateChecklistItemSchema } from "@/lib/schemas";
+import { invalidateScenariosCache } from "@/lib/evaluator";
 
 export async function PUT(
   req: NextRequest,
@@ -41,6 +42,7 @@ export async function PUT(
       `UPDATE ChecklistItems SET ${setParts.join(", ")} WHERE Id = @itemId AND ScenarioId = @scenarioId`
     );
 
+    invalidateScenariosCache();
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
@@ -61,6 +63,7 @@ export async function DELETE(
       .input("scenarioId", sql.NVarChar, params.id)
       .query("DELETE FROM ChecklistItems WHERE Id = @itemId AND ScenarioId = @scenarioId");
 
+    invalidateScenariosCache();
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
