@@ -1,23 +1,39 @@
 import sql from "mssql";
-console.log("DB_SERVER from env:", process.env.DB_SERVER);
 
+function parseSqlServerTarget(rawServer: string | undefined): { server: string; instanceName?: string } {
+  const normalized = (rawServer ?? "").trim().replace(/\\+/g, "\\");
+  const [server, ...instanceParts] = normalized.split("\\").filter(Boolean);
+  const instanceName = instanceParts.join("\\").trim() || undefined;
 
-const config: sql.config = {
-  server: process.env.DB_SERVER!,
-  database: process.env.DB_DATABASE!,
-  user: process.env.DB_USER!,
-  password: process.env.DB_PASSWORD!,
-  port: parseInt(process.env.DB_PORT || "1433"),
-  options: {
-    trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === "true",
-    encrypt: false,
-  },
-  pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000,
-  },
-};
+  return {
+    server: server ?? "",
+    ...(instanceName ? { instanceName } : {}),
+  };
+}
+
+// Config is built lazily inside getPool() so that env vars are read after
+// dotenv has loaded them — not at module import time.
+function buildConfig(): sql.config {
+  const sqlTarget = parseSqlServerTarget(process.env.DB_SERVER);
+  const parsedPort = parseInt(process.env.DB_PORT || "1433", 10);
+  return {
+    server: sqlTarget.server,
+    database: process.env.DB_DATABASE!,
+    user: process.env.DB_USER!,
+    password: process.env.DB_PASSWORD!,
+    ...(sqlTarget.instanceName ? {} : { port: parsedPort }),
+    options: {
+      trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === "true",
+      encrypt: false,
+      ...(sqlTarget.instanceName ? { instanceName: sqlTarget.instanceName } : {}),
+    },
+    pool: {
+      max: 10,
+      min: 0,
+      idleTimeoutMillis: 30000,
+    },
+  };
+}
 
 let pool: sql.ConnectionPool | null = null;
 let migrationRan = false;
@@ -29,6 +45,8 @@ async function runMigrations(p: sql.ConnectionPool): Promise<void> {
     await p.request().query(`
       IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('BatchJobs') AND name = 'OriginalFile')
         ALTER TABLE BatchJobs ADD OriginalFile VARBINARY(MAX) NULL;
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('BatchJobs') AND name = 'LockedAt')
+        ALTER TABLE BatchJobs ADD LockedAt DATETIME2 NULL;
       IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'LatencyMs')
         ALTER TABLE Evaluations ADD LatencyMs INT;
       IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Evaluations') AND name = 'CreatedByName')
@@ -49,7 +67,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
   if (pool && pool.connected) {
     return pool;
   }
-  pool = await new sql.ConnectionPool(config).connect();
+  pool = await new sql.ConnectionPool(buildConfig()).connect();
   await runMigrations(pool);
   return pool;
 }

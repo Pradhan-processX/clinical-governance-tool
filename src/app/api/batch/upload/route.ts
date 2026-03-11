@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPool, sql } from "@/lib/db";
 import { parseExcelBuffer, getPreviewRows } from "@/lib/excel-parser";
-import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,59 +11,17 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { rows, mapping, headers, warnings } = parseExcelBuffer(buffer);
+    const { rows, headers, warnings } = parseExcelBuffer(buffer);
     const preview = getPreviewRows(buffer);
 
     if (rows.length === 0) {
       return NextResponse.json({ error: "No data rows found in Excel file." }, { status: 400 });
     }
 
-    // Determine batch date (today)
-    const today = new Date().toISOString().split("T")[0];
-
-    // Create BatchJob
-    const pool = await getPool();
-    const batchId = uuidv4();
-
-    const batchRequest = pool.request();
-    batchRequest.input("id", sql.NVarChar, batchId);
-    batchRequest.input("fileName", sql.NVarChar, file.name);
-    batchRequest.input("originalFile", sql.VarBinary(sql.MAX), buffer);
-    batchRequest.input("batchDate", sql.Date, today);
-    batchRequest.input("totalNotes", sql.Int, rows.length);
-
-    await batchRequest.query(`
-      INSERT INTO BatchJobs (Id, FileName, OriginalFile, BatchDate, TotalNotes, Status)
-      VALUES (@id, @fileName, @originalFile, @batchDate, @totalNotes, 'pending')
-    `);
-
-    // Insert evaluation stubs (EvaluationStatus = NULL = pending)
-    for (const row of rows) {
-      const evalRequest = pool.request();
-      evalRequest.input("id", sql.NVarChar, uuidv4());
-      evalRequest.input("batchId", sql.NVarChar, batchId);
-      evalRequest.input("batchDate", sql.Date, today);
-      evalRequest.input("roomNumber", sql.NVarChar, row.room);
-      evalRequest.input("residentName", sql.NVarChar, row.residentName);
-      evalRequest.input("noteDate", sql.NVarChar, row.date);
-      evalRequest.input("noteTime", sql.NVarChar, row.time);
-      evalRequest.input("eventType", sql.NVarChar, row.eventType);
-      evalRequest.input("createdByName", sql.NVarChar, row.createdByName);
-      evalRequest.input("progressNoteText", sql.NVarChar(sql.MAX), row.notes);
-      evalRequest.input("sourceRowIndex", sql.Int, row.rawRowIndex);
-
-      await evalRequest.query(`
-        INSERT INTO Evaluations (Id, BatchId, BatchDate, RoomNumber, ResidentName, NoteDate, NoteTime, EventType, CreatedByName, ProgressNoteText, SourceRowIndex)
-        VALUES (@id, @batchId, @batchDate, @roomNumber, @residentName, @noteDate, @noteTime, @eventType, @createdByName, @progressNoteText, @sourceRowIndex)
-      `);
-    }
-
+    // No DB write here — the file is only stored when the user confirms by clicking Start Evaluation.
     return NextResponse.json({
-      batchId,
       totalNotes: rows.length,
       fileName: file.name,
-      batchDate: today,
-      mapping,
       headers,
       preview: preview.rows,
       warnings,

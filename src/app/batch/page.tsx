@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, FileSpreadsheet, Loader2 } from "lucide-react";
 
 interface UploadResult {
-  batchId: string;
   totalNotes: number;
   fileName: string;
   headers: string[];
@@ -19,6 +18,7 @@ interface UploadResult {
 export default function BatchPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+  const [batchId, setBatchId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [started, setStarted] = useState(false);
@@ -27,6 +27,7 @@ export default function BatchPage() {
   const handleFileSelected = (f: File) => {
     setFile(f);
     setUploadResult(null);
+    setBatchId(null);
     setStarted(false);
     setError(null);
   };
@@ -50,13 +51,16 @@ export default function BatchPage() {
   };
 
   const handleStart = async () => {
-    if (!uploadResult) return;
+    if (!uploadResult || !file) return;
     setProcessing(true);
     setError(null);
     try {
-      const res = await fetch(`/api/batch/${uploadResult.batchId}/start`, { method: "POST" });
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/batch/start", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to start");
+      setBatchId(data.batchId);
       setStarted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start processing");
@@ -149,14 +153,14 @@ export default function BatchPage() {
         </>
       )}
 
-      {started && uploadResult && (
+      {started && uploadResult && batchId && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Processing: {uploadResult.fileName}</CardTitle>
           </CardHeader>
           <CardContent>
             <ProcessingProgress
-              batchId={uploadResult.batchId}
+              batchId={batchId}
               totalNotes={uploadResult.totalNotes}
             />
           </CardContent>
