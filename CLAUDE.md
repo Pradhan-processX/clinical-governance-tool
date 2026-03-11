@@ -20,6 +20,7 @@ AI-powered clinical governance evaluation tool for Australian aged care faciliti
 
 ```bash
 npm run dev      # Start dev server (http://localhost:3000)
+npm run worker   # Batch processing worker — run in a second terminal
 npm run build    # Production build
 npm run start    # Start production server
 npm run lint     # ESLint
@@ -79,7 +80,9 @@ src/
 │   ├── schemas.ts          # Zod schemas for API validation
 │   ├── seed.ts             # Seeds 3 fall scenarios with checklist items
 │   └── utils.ts
-└── types/                  # TypeScript type definitions
+├── types/                  # TypeScript type definitions
+└── worker/
+    └── index.ts            # Batch job worker — polls DB for queued jobs, runs processBatch()
 ```
 
 ## Database Schema (SQL Server)
@@ -88,7 +91,7 @@ Five tables, all created by `/api/setup`:
 
 - **Scenarios** — Clinical scenario definitions (Code, Name, Category, ClassificationHints)
 - **ChecklistItems** — Items per scenario (ItemCode, ItemText, Mandatory, Keywords)
-- **BatchJobs** — Batch file tracking (Status: pending → processing → completed/failed; **OriginalFile** stores raw Excel bytes for re-download)
+- **BatchJobs** — Batch file tracking (Status: queued → processing → completed/failed; **OriginalFile** stores raw Excel bytes for re-download; written at start time, not upload time)
 - **Evaluations** — Per-note results (ClassifiedScenarioCode, Confidence, EvaluationStatus, DocumentedItems, MissingMandatoryCount, LatencyMs, CreatedByName, **PromptSent**, **SystemPromptSent**)
 - **ItemResults** — Per-checklist-item results (IsDocumented, Evidence, Gap)
 
@@ -120,7 +123,7 @@ Five tables, all created by `/api/setup`:
 - **Azure OpenAI** response is requested as `response_format: { type: "json_object" }` — always parse with `JSON.parse`
 - **Batch jobs** are processed asynchronously; polling `GET /api/batch/[id]/status` for progress
 - **Excel column detection** is fuzzy/case-insensitive in `excel-parser.ts` — handles Manad export variations
-- **Original Excel file** is stored as `VARBINARY(MAX)` in `BatchJobs.OriginalFile` at upload time so the download route can enrich and return it without needing the original file in memory
+- **Original Excel file** is stored as `VARBINARY(MAX)` in `BatchJobs.OriginalFile` at **start time** (when user confirms Start Evaluation) — not at upload/preview time. Upload is stateless.
 - **Scenario cache** is invalidated via `invalidateScenariosCache()` (exported from `evaluator.ts`) on every scenario create/update/delete
 
 ## AI Trace
@@ -163,7 +166,7 @@ Five tables, all created by `/api/setup`:
 - `DB_TRUST_SERVER_CERTIFICATE=true` is intentional for internal SQL Express instances
 - The AI model deployment name is `gpt-4.1` (not `gpt-4o`) — confirm in `.env.local`
 - Excel exports colour-code rows: green = compliant, yellow = partial, red = non-compliant
-- `console.log("DB_SERVER from env:", ...)` is present in `db.ts` — remove before production
+- `db.ts` builds SQL config lazily inside `getPool()` — do not move env var reads back to module level or the worker will fail to connect
 
 ## Current Version Status
 
@@ -212,5 +215,5 @@ See [docs/jira-production-backlog.md](docs/jira-production-backlog.md) for all P
 ### 5. Automated data ingestion (not implemented yet)
 
 - Currently requires a governance manager to manually export from Manad and upload an Excel file.
-- Target: nightly automated pull via Manad API (if available) or UiPath RPA (automates Manad UI export, saves file, POSTs to `/api/batch/upload`, POSTs to `/api/batch/{id}/start`).
+- Target: nightly automated pull via Manad API (if available) or UiPath RPA (automates Manad UI export, saves file, POSTs to `/api/batch/upload` for preview, POSTs file to `/api/batch/start` to queue).
 - No changes to the core batch engine are needed — only a scheduler/trigger layer on top of the existing upload and start APIs.
